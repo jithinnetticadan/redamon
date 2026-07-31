@@ -119,6 +119,12 @@ services:
     environment:
       <<: *corp-env
 
+  capture-proxy:
+    build:
+      <<: *corp-build
+    environment:
+      <<: *corp-env
+
   # ---------------------------------------------------------------------------
   # Image-only services — runtime env only (no build)
   # ---------------------------------------------------------------------------
