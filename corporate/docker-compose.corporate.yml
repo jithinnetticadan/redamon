@@ -43,92 +43,79 @@ services:
 
   agent:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   recon:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   vuln-scanner:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   github-secret-hunter:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   trufflehog-scanner:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   wcvs:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   codefix-sandbox:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   baddns-scanner:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   ai-attack-surface:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   docker-broker:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   recon-orchestrator:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   kali-sandbox:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
   webapp:
     build:
-      args:
-        <<: *corp-build
+      <<: *corp-build
     environment:
       <<: *corp-env
 
