@@ -1,0 +1,145 @@
+# =============================================================================
+# RedAmon — Corporate Network Overlay
+# =============================================================================
+# Routes all Docker image builds and container runtime through the corporate
+# Zscaler proxy and installs the Zscaler root certificate into every image.
+#
+# This file is loaded automatically by redamon.sh when it detects this file
+# exists. Just run:
+#
+#   ./redamon.sh install    (first time)
+#   ./redamon.sh update     (subsequent upgrades)
+#
+# If you need to run docker compose directly without redamon.sh:
+#   export CORP_CERT_B64=$(base64 -w0 corporate/ZscalerRootCertificate.crt)
+#   docker compose -f docker-compose.yml -f corporate/docker-compose.corporate.yml up --build
+#
+# Proxy: http://10.233.37.2:8118
+# Cert : corporate/ZscalerRootCertificate.crt (read and base64-encoded by redamon.sh)
+# =============================================================================
+
+x-corp-build: &corp-build
+  args:
+    HTTP_PROXY: "http://10.233.37.2:8118"
+    HTTPS_PROXY: "http://10.233.37.2:8118"
+    NO_PROXY: "localhost,127.0.0.1,neo4j,postgres,webapp,agent,kali-sandbox"
+    CORP_CERT_B64: "${CORP_CERT_B64}"
+
+# Both uppercase and lowercase variants because tools differ (apt uses lowercase,
+# curl/wget accept both, Python/Node accept uppercase).
+x-corp-env: &corp-env
+  HTTP_PROXY: "http://10.233.37.2:8118"
+  HTTPS_PROXY: "http://10.233.37.2:8118"
+  NO_PROXY: "localhost,127.0.0.1,neo4j,postgres,webapp,agent,kali-sandbox"
+  http_proxy: "http://10.233.37.2:8118"
+  https_proxy: "http://10.233.37.2:8118"
+  no_proxy: "localhost,127.0.0.1,neo4j,postgres,webapp,agent,kali-sandbox"
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Services with a build step — add proxy build-args + runtime env
+  # ---------------------------------------------------------------------------
+
+  agent:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  recon:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  vuln-scanner:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  github-secret-hunter:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  trufflehog-scanner:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  wcvs:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  codefix-sandbox:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  baddns-scanner:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  ai-attack-surface:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  docker-broker:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  recon-orchestrator:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  kali-sandbox:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  webapp:
+    build:
+      args:
+        <<: *corp-build
+    environment:
+      <<: *corp-env
+
+  # ---------------------------------------------------------------------------
+  # Image-only services — runtime env only (no build)
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    environment:
+      <<: *corp-env
+
+  neo4j:
+    environment:
+      <<: *corp-env

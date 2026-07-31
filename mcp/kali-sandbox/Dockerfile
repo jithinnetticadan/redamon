@@ -1,5 +1,12 @@
 FROM kalilinux/kali-rolling:latest
 
+# corp-proxy-start (ARGs only — cert is injected after the Kali apt bootstrap below)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY=localhost,127.0.0.1
+ARG CORP_CERT_B64=""
+# corp-proxy-end
+
 LABEL maintainer="RedAmon Project"
 LABEL description="Kali Linux sandbox with MCP servers for agentic penetration testing"
 
@@ -15,6 +22,23 @@ RUN echo "deb http://kali.download/kali kali-rolling main contrib non-free non-f
     && update-ca-certificates \
     && echo "deb https://kali.download/kali kali-rolling main contrib non-free non-free-firmware" > /etc/apt/sources.list \
     && apt-get update
+
+# corp-proxy-start (cert injection after Kali has ca-certificates installed)
+RUN if [ -n "${CORP_CERT_B64}" ]; then \
+      printf '%s' "${CORP_CERT_B64}" | base64 -d \
+        > /usr/local/share/ca-certificates/ZscalerRoot.crt \
+      && update-ca-certificates; \
+    fi
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt \
+    NPM_CONFIG_CAFILE=/etc/ssl/certs/ca-certificates.crt \
+    NPM_CONFIG_PROXY=${HTTP_PROXY} \
+    NPM_CONFIG_HTTPS_PROXY=${HTTPS_PROXY} \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
+# corp-proxy-end
 
 # Allow HTTPS→HTTP redirects (Kali CDN sometimes redirects to http mirrors)
 RUN echo 'Acquire::https::Redirect::Allowed "true";' > /etc/apt/apt.conf.d/99allow-redirect

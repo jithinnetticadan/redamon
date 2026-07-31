@@ -20,6 +20,7 @@ CORE_SERVICES="postgres neo4j docker-broker recon-orchestrator kali-sandbox agen
 # cache poisoning module.
 TOOL_IMAGES="redamon-recon:latest redamon-vuln-scanner:latest redamon-github-hunter:latest redamon-trufflehog:latest redamon-baddns:latest redamon-ai-attack-surface:latest redamon-codefix-sandbox:latest redamon-wcvs:latest"
 DEV_COMPOSE="-f docker-compose.yml -f docker-compose.dev.yml"
+CORP_OVERLAY="$SCRIPT_DIR/corporate/docker-compose.corporate.yml"
 
 # Orchestrator-spawned containers that docker compose does NOT manage (they are
 # created at runtime via the Docker API, so `compose down` leaves them behind and
@@ -557,6 +558,33 @@ _migrate_legacy_kbase_flag() {
     else
         touch "$KBASE_DISABLED_FLAG_FILE"
     fi
+}
+
+# Load corporate proxy overlay if present.
+# Sets COMPOSE_FILE so every downstream `docker compose` call automatically
+# uses the Zscaler proxy + cert without modifying any other code path.
+load_corporate_overlay() {
+    [[ -f "$CORP_OVERLAY" ]] || return 0
+
+    # COMPOSE_FILE is the standard Docker Compose mechanism for merging files;
+    # it is respected by every `docker compose` call that does not use explicit -f.
+    export COMPOSE_FILE="docker-compose.yml:${CORP_OVERLAY}"
+    # Dev mode uses explicit -f flags which ignore COMPOSE_FILE; patch it too.
+    DEV_COMPOSE="$DEV_COMPOSE -f $CORP_OVERLAY"
+
+    # Derive CORP_CERT_B64 from the cert file when not already in the environment.
+    local cert="$SCRIPT_DIR/corporate/ZscalerRootCertificate.crt"
+    if [[ -z "${CORP_CERT_B64:-}" && -f "$cert" ]] && grep -q 'BEGIN CERTIFICATE' "$cert"; then
+        if base64 --version 2>&1 | grep -q GNU; then
+            CORP_CERT_B64="$(base64 -w0 "$cert")"
+        else
+            CORP_CERT_B64="$(base64 -i "$cert" | tr -d '\n')"
+        fi
+        export CORP_CERT_B64
+        info "Corporate overlay: Zscaler cert loaded (${#CORP_CERT_B64} chars)."
+    fi
+
+    info "Corporate overlay active."
 }
 
 check_prerequisites() {
@@ -2343,6 +2371,7 @@ cmd_help() {
 # tested in isolation.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 cd "$SCRIPT_DIR"
+load_corporate_overlay
 
 # #163: clamp the per-service `cpus:` caps to the host's core count for EVERY
 # command that can touch Docker. Done here rather than inside each command

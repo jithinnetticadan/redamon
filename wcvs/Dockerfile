@@ -12,6 +12,22 @@
 # Pin WCVS_REF to a release tag/commit for reproducible builds.
 # -----------------------------------------------------------------------------
 FROM golang:1.23-bookworm AS builder
+# corp-proxy-start
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY=localhost,127.0.0.1
+ARG CORP_CERT_B64=""
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && if [ -n "${CORP_CERT_B64}" ]; then \
+         printf '%s' "${CORP_CERT_B64}" | base64 -d \
+           > /usr/local/share/ca-certificates/ZscalerRoot.crt; \
+       fi \
+    && update-ca-certificates
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
+    GONOSUMDB=*
+# corp-proxy-end
 
 ARG WCVS_REF=master
 RUN git clone https://github.com/Hackmanit/Web-Cache-Vulnerability-Scanner.git /src \
@@ -21,6 +37,21 @@ RUN git clone https://github.com/Hackmanit/Web-Cache-Vulnerability-Scanner.git /
 
 # -----------------------------------------------------------------------------
 FROM debian:bookworm-slim
+# corp-proxy-start
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY=localhost,127.0.0.1
+ARG CORP_CERT_B64=""
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && if [ -n "${CORP_CERT_B64}" ]; then \
+         printf '%s' "${CORP_CERT_B64}" | base64 -d \
+           > /usr/local/share/ca-certificates/ZscalerRoot.crt; \
+       fi \
+    && update-ca-certificates
+ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+# corp-proxy-end
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \

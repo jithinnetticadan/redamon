@@ -7,6 +7,21 @@
 # Static linking required: Alpine uses musl but the final image uses Debian/glibc
 # Source: https://github.com/BishopFox/jsluice (MIT)
 FROM golang:1.22-alpine AS jsluice-builder
+# corp-proxy-start
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY=localhost,127.0.0.1
+ARG CORP_CERT_B64=""
+RUN apk add --no-cache ca-certificates \
+    && if [ -n "${CORP_CERT_B64}" ]; then \
+         printf '%s' "${CORP_CERT_B64}" | base64 -d \
+           > /usr/local/share/ca-certificates/ZscalerRoot.crt; \
+       fi \
+    && update-ca-certificates
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
+    GONOSUMDB=*
+# corp-proxy-end
 RUN printf '#!/bin/sh\nmax=5; n=0; until "$@"; do n=$((n+1)); [ $n -ge $max ] && exit 1; echo "Retry $n/$max ..."; sleep $((n*5)); done\n' \
     > /usr/local/bin/retry && chmod +x /usr/local/bin/retry
 RUN retry apk add --no-cache gcc musl-dev && \
@@ -15,6 +30,21 @@ RUN retry apk add --no-cache gcc musl-dev && \
 
 # Stage 1b: Build ffuf binary (pure Go, no CGO needed)
 FROM golang:1.22-alpine AS ffuf-builder
+# corp-proxy-start
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY=localhost,127.0.0.1
+ARG CORP_CERT_B64=""
+RUN apk add --no-cache ca-certificates \
+    && if [ -n "${CORP_CERT_B64}" ]; then \
+         printf '%s' "${CORP_CERT_B64}" | base64 -d \
+           > /usr/local/share/ca-certificates/ZscalerRoot.crt; \
+       fi \
+    && update-ca-certificates
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
+    GONOSUMDB=*
+# corp-proxy-end
 RUN printf '#!/bin/sh\nmax=5; n=0; until "$@"; do n=$((n+1)); [ $n -ge $max ] && exit 1; echo "Retry $n/$max ..."; sleep $((n*5)); done\n' \
     > /usr/local/bin/retry && chmod +x /usr/local/bin/retry
 # T17: pinned to the v2.1.0 release tag (was @latest -> moving pseudo-version).
@@ -25,6 +55,21 @@ RUN CGO_ENABLED=0 retry go install github.com/ffuf/ffuf/v2@v2.1.0
 # Recent subjack tip requires Go >= 1.25, so we use a matching builder.
 # Fingerprints are compiled into the binary — no runtime data file required.
 FROM golang:1.25-alpine AS subjack-builder
+# corp-proxy-start
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY=localhost,127.0.0.1
+ARG CORP_CERT_B64=""
+RUN apk add --no-cache ca-certificates \
+    && if [ -n "${CORP_CERT_B64}" ]; then \
+         printf '%s' "${CORP_CERT_B64}" | base64 -d \
+           > /usr/local/share/ca-certificates/ZscalerRoot.crt; \
+       fi \
+    && update-ca-certificates
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
+    GONOSUMDB=*
+# corp-proxy-end
 RUN printf '#!/bin/sh\nmax=5; n=0; until "$@"; do n=$((n+1)); [ $n -ge $max ] && exit 1; echo "Retry $n/$max ..."; sleep $((n*5)); done\n' \
     > /usr/local/bin/retry && chmod +x /usr/local/bin/retry
 # T17: pinned to a specific commit (subjack publishes no stable release tags).
@@ -32,6 +77,21 @@ RUN CGO_ENABLED=0 retry go install github.com/haccer/subjack@b53899ce6230767beb1
 
 # Stage 1c: Build masscan from source (C project, requires libpcap)
 FROM debian:bookworm-slim AS masscan-builder
+# corp-proxy-start
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY=localhost,127.0.0.1
+ARG CORP_CERT_B64=""
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && if [ -n "${CORP_CERT_B64}" ]; then \
+         printf '%s' "${CORP_CERT_B64}" | base64 -d \
+           > /usr/local/share/ca-certificates/ZscalerRoot.crt; \
+       fi \
+    && update-ca-certificates
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
+# corp-proxy-end
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git gcc make libpcap-dev ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
@@ -43,6 +103,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Stage 2: Main recon image
 FROM python:3.11-slim-bookworm
+
+# corp-proxy-start — remove this block when building outside the corporate network
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY=localhost,127.0.0.1
+ARG CORP_CERT_B64=""
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && if [ -n "${CORP_CERT_B64}" ]; then \
+         printf '%s' "${CORP_CERT_B64}" | base64 -d \
+           > /usr/local/share/ca-certificates/ZscalerRoot.crt; \
+       fi \
+    && update-ca-certificates
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt \
+    NPM_CONFIG_CAFILE=/etc/ssl/certs/ca-certificates.crt \
+    NPM_CONFIG_PROXY=${HTTP_PROXY} \
+    NPM_CONFIG_HTTPS_PROXY=${HTTPS_PROXY} \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
+# corp-proxy-end
 
 LABEL maintainer="RedAmon Team"
 LABEL description="RedAmon Reconnaissance Module - Automated OSINT Framework"
