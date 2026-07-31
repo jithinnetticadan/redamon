@@ -125,6 +125,12 @@ services:
     environment:
       <<: *corp-env
 
+  traffic-ingest:
+    build:
+      <<: *corp-build
+    environment:
+      <<: *corp-env
+
   # ---------------------------------------------------------------------------
   # Image-only services — runtime env only (no build)
   # ---------------------------------------------------------------------------
