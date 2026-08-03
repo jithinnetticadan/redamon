@@ -11,15 +11,19 @@
 
 set -euo pipefail
 
-UPSTREAM_REMOTE="${UPSTREAM_REMOTE:-upstream}"
-MAIN_BRANCH="${MAIN_BRANCH:-main}"
-CORPORATE_BRANCH="${CORPORATE_BRANCH:-corporate}"
+UPSTREAM_REMOTE="upstream"
+MAIN_BRANCH="master"
+CORPORATE_BRANCH="corporate"
 
 echo "==> Fetching upstream..."
 git fetch "${UPSTREAM_REMOTE}"
 
 echo "==> Updating ${MAIN_BRANCH} from ${UPSTREAM_REMOTE}/${MAIN_BRANCH}..."
-git checkout "${MAIN_BRANCH}"
+if git show-ref --verify --quiet "refs/heads/${MAIN_BRANCH}"; then
+	git checkout "${MAIN_BRANCH}"
+else
+	git checkout -b "${MAIN_BRANCH}" --track "${UPSTREAM_REMOTE}/${MAIN_BRANCH}"
+fi
 git merge --ff-only "${UPSTREAM_REMOTE}/${MAIN_BRANCH}"
 
 echo "==> Rebasing ${CORPORATE_BRANCH} on ${MAIN_BRANCH}..."
