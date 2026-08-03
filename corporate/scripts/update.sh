@@ -11,9 +11,9 @@
 
 set -euo pipefail
 
-UPSTREAM_REMOTE="upstream"
-MAIN_BRANCH="master"
-CORPORATE_BRANCH="corporate"
+UPSTREAM_REMOTE="${UPSTREAM_REMOTE:-upstream}"
+MAIN_BRANCH="${MAIN_BRANCH:-master}"
+CORPORATE_BRANCH="${CORPORATE_BRANCH:-corporate}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
