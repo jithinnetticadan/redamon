@@ -11,9 +11,9 @@
 
 set -euo pipefail
 
-UPSTREAM_REMOTE="upstream"
-MAIN_BRANCH="master"
-CORPORATE_BRANCH="corporate"
+UPSTREAM_REMOTE="${UPSTREAM_REMOTE:-upstream}"
+MAIN_BRANCH="${MAIN_BRANCH:-master}"
+CORPORATE_BRANCH="${CORPORATE_BRANCH:-corporate}"
 
 echo "==> Fetching upstream..."
 git fetch "${UPSTREAM_REMOTE}"
