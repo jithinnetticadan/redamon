@@ -11,9 +11,30 @@
 
 set -euo pipefail
 
-UPSTREAM_REMOTE="${UPSTREAM_REMOTE:-upstream}"
-MAIN_BRANCH="${MAIN_BRANCH:-master}"
-CORPORATE_BRANCH="${CORPORATE_BRANCH:-corporate}"
+UPSTREAM_REMOTE="upstream"
+MAIN_BRANCH="master"
+CORPORATE_BRANCH="corporate"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${REPO_ROOT}"
+
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+	echo "ERROR: This script must run inside a git repository." >&2
+	exit 1
+fi
+
+if [[ -n "$(git status --porcelain)" ]]; then
+	echo "ERROR: You have uncommitted changes. Commit or stash first." >&2
+	git status --short
+	exit 1
+fi
+
+if ! git remote get-url "${UPSTREAM_REMOTE}" >/dev/null 2>&1; then
+	echo "ERROR: Missing '${UPSTREAM_REMOTE}' remote." >&2
+	echo "Run: git remote add ${UPSTREAM_REMOTE} https://github.com/samugit83/redamon.git" >&2
+	exit 1
+fi
 
 echo "==> Fetching upstream..."
 git fetch "${UPSTREAM_REMOTE}"
@@ -29,6 +50,11 @@ git merge --ff-only "${UPSTREAM_REMOTE}/${MAIN_BRANCH}"
 echo "==> Rebasing ${CORPORATE_BRANCH} on ${MAIN_BRANCH}..."
 git checkout "${CORPORATE_BRANCH}"
 git rebase "${MAIN_BRANCH}"
+
+if ! git rev-parse --abbrev-ref "${CORPORATE_BRANCH}@{upstream}" >/dev/null 2>&1; then
+	echo "==> Setting upstream tracking for ${CORPORATE_BRANCH} -> origin/${CORPORATE_BRANCH}..."
+	git branch --set-upstream-to="origin/${CORPORATE_BRANCH}" "${CORPORATE_BRANCH}" 2>/dev/null || true
+fi
 
 echo ""
 echo "==> Rebase complete. If there were conflicts, resolve them and run:"
